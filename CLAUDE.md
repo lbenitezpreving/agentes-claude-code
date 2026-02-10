@@ -29,6 +29,8 @@ docs/                   # Documentacion generada
 
 ## Agentes Disponibles
 
+- **react-generator**: Genera componentes React completos (tsx, css, tests, index)
+- **endpoint-generator**: Genera endpoints FastAPI completos (router, schemas, tests)
 - **playwright-validator**: Valida funcionalidad E2E despues de desarrollar nuevas features
 
 ## Skills Disponibles
