@@ -59,6 +59,20 @@
   color: #666;
 }
 
+.taskDates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-left: 2rem;
+  margin-top: 0.5rem;
+}
+
+.taskDate {
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+}
+
 .deleteButton {
   position: absolute;
   right: 0.5rem;

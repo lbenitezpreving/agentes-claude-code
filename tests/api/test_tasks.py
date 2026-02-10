@@ -95,14 +95,30 @@ class TestTasksEndpoints:
         create_response = client.post("/tasks/", json={"name": "Toggle test"})
         task_id = create_response.json()["id"]
 
-        # Toggle primera vez
+        # Toggle primera vez - debe setear completed_at
         response = client.patch(f"/tasks/{task_id}/toggle")
         assert response.status_code == 200
         assert response.json()["completed"] is True
+        assert response.json()["completed_at"] is not None
 
-        # Toggle segunda vez
+        # Toggle segunda vez - debe limpiar completed_at
         response = client.patch(f"/tasks/{task_id}/toggle")
         assert response.json()["completed"] is False
+        assert response.json()["completed_at"] is None
+
+    def test_completed_at_on_update(self, client):
+        """Test que completed_at se actualiza correctamente con PUT."""
+        # Crear tarea
+        create_response = client.post("/tasks/", json={"name": "Update test"})
+        task_id = create_response.json()["id"]
+
+        # Actualizar a completed=True
+        response = client.put(f"/tasks/{task_id}", json={"completed": True})
+        assert response.json()["completed_at"] is not None
+
+        # Actualizar a completed=False
+        response = client.put(f"/tasks/{task_id}", json={"completed": False})
+        assert response.json()["completed_at"] is None
 
     def test_delete_task(self, client):
         """Test DELETE /tasks/{id}."""

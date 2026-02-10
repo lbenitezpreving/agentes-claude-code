@@ -80,4 +80,25 @@ export class TaskPage {
   async getTaskCount(): Promise<number> {
     return this.page.locator('li').count();
   }
+
+  getTaskCreatedDate(taskName: string): Locator {
+    return this.getTaskItem(taskName).locator('text=/Creada el/');
+  }
+
+  getTaskCompletedDate(taskName: string): Locator {
+    return this.getTaskItem(taskName).locator('text=/Completada el/');
+  }
+
+  async expectTaskHasCreatedDate(taskName: string) {
+    await expect(this.getTaskCreatedDate(taskName)).toBeVisible();
+  }
+
+  async expectTaskHasCompletedDate(taskName: string, visible: boolean) {
+    const completedDate = this.getTaskCompletedDate(taskName);
+    if (visible) {
+      await expect(completedDate).toBeVisible();
+    } else {
+      await expect(completedDate).not.toBeVisible();
+    }
+  }
 }

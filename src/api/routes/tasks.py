@@ -41,6 +41,7 @@ async def create_task(data: TaskCreate):
         "completed": False,
         "created_at": datetime.now(UTC),
         "updated_at": None,
+        "completed_at": None,
     }
 
     _tasks_db[_next_id] = task
@@ -64,6 +65,10 @@ async def update_task(task_id: int, data: TaskUpdate):
     for field, value in update_data.items():
         task[field] = value
 
+    # Actualizar completed_at si cambia el estado de completed
+    if "completed" in update_data:
+        task["completed_at"] = datetime.now(UTC) if update_data["completed"] else None
+
     task["updated_at"] = datetime.now(UTC)
     _tasks_db[task_id] = task
 
@@ -82,6 +87,7 @@ async def toggle_task(task_id: int):
     task = _tasks_db[task_id]
     task["completed"] = not task["completed"]
     task["updated_at"] = datetime.now(UTC)
+    task["completed_at"] = datetime.now(UTC) if task["completed"] else None
 
     return task
 

@@ -15,6 +15,7 @@ const mockTasks: Task[] = [
     name: 'Tarea 2',
     completed: true,
     created_at: '2024-01-02T00:00:00Z',
+    completed_at: '2024-01-03T14:30:00Z',
   },
 ];
 
@@ -83,5 +84,19 @@ describe('TaskList', () => {
 
     const completedCheckbox = screen.getAllByRole('checkbox')[1];
     expect(completedCheckbox).toBeChecked();
+  });
+
+  it('shows created_at date for all tasks', () => {
+    render(<TaskList tasks={mockTasks} />);
+
+    expect(screen.getByText(/Creada el 01\/01\/2024/)).toBeInTheDocument();
+    expect(screen.getByText(/Creada el 02\/01\/2024/)).toBeInTheDocument();
+  });
+
+  it('shows completed_at date only for completed tasks', () => {
+    render(<TaskList tasks={mockTasks} />);
+
+    expect(screen.getByText(/Completada el 03\/01\/2024/)).toBeInTheDocument();
+    expect(screen.queryAllByText(/Completada el/)).toHaveLength(1);
   });
 });

@@ -30,3 +30,4 @@ class TaskResponse(TaskBase):
     completed: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = Field(None, description="Fecha de completado")

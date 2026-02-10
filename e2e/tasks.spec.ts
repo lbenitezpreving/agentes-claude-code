@@ -85,4 +85,35 @@ test.describe('CRUD de Tareas', () => {
     await expect(taskPage.taskNameInput).toHaveValue('');
     await expect(taskPage.taskDescInput).toHaveValue('');
   });
+
+  test('debe mostrar fecha de creacion al crear tarea', async () => {
+    const taskName = `Task fecha ${Date.now()}`;
+
+    await taskPage.createTask(taskName);
+
+    await taskPage.expectTaskHasCreatedDate(taskName);
+  });
+
+  test('debe mostrar fecha de completado al marcar tarea', async () => {
+    const taskName = `Task completed date ${Date.now()}`;
+
+    await taskPage.createTask(taskName);
+    await taskPage.expectTaskHasCompletedDate(taskName, false);
+
+    await taskPage.toggleTask(taskName);
+
+    await taskPage.expectTaskHasCompletedDate(taskName, true);
+  });
+
+  test('debe ocultar fecha de completado al desmarcar tarea', async () => {
+    const taskName = `Task uncomplete date ${Date.now()}`;
+
+    await taskPage.createTask(taskName);
+    await taskPage.toggleTask(taskName);
+    await taskPage.expectTaskHasCompletedDate(taskName, true);
+
+    await taskPage.toggleTask(taskName);
+
+    await taskPage.expectTaskHasCompletedDate(taskName, false);
+  });
 });
