@@ -3,7 +3,7 @@
 ## Stack Tecnológico
 - Frontend: React 18 + TypeScript + Vite
 - Backend: Python 3.11 + FastAPI
-- Testing: Vitest (front), pytest (back)
+- Testing: Vitest (front), pytest (back), Playwright (E2E)
 
 ## Convenciones
 - Componentes React en PascalCase
@@ -21,13 +21,17 @@ src/
 tests/
 ├── components/         # Tests de React
 └── api/               # Tests de API
-docs/                   # Documentación generada
+e2e/
+├── pages/             # Page Objects para Playwright
+└── *.spec.ts          # Tests E2E
+docs/                   # Documentacion generada
 ```
 
 ## Agentes Disponibles
 
-- **code-reviewer**: Revisa código React y Python después de cambios
-- **test-generator**: Genera tests para código existente
+- **code-reviewer**: Revisa codigo React y Python despues de cambios
+- **test-generator**: Genera tests para codigo existente
+- **playwright-validator**: Valida funcionalidad E2E despues de desarrollar nuevas features
 
 ## Skills Disponibles
 
