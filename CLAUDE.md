@@ -29,14 +29,14 @@ docs/                   # Documentacion generada
 
 ## Agentes Disponibles
 
-- **code-reviewer**: Revisa codigo React y Python despues de cambios
-- **test-generator**: Genera tests para codigo existente
 - **playwright-validator**: Valida funcionalidad E2E despues de desarrollar nuevas features
 
 ## Skills Disponibles
 
 - `/react-component [Name]`: Genera componente React completo
 - `/python-endpoint [name]`: Genera endpoint FastAPI completo
+- `/code-review`: Revisa codigo React y Python
+- `/generate-tests [file]`: Genera tests para un archivo
 - `/document-api`: Documenta la API FastAPI
 - `/document-component [Name]`: Documenta un componente React
 
