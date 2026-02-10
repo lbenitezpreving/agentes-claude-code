@@ -2,6 +2,7 @@
 name: react-generator
 description: Genera componentes React completos. Usalo cuando necesites crear un nuevo componente con TypeScript, estilos y tests.
 tools: Read, Write, Glob, Grep, Bash
+color: red
 model: sonnet
 skills:
   - react-component

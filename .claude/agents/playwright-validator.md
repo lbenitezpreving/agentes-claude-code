@@ -2,6 +2,7 @@
 name: playwright-validator
 description: Valida funcionalidad E2E con Playwright. Usalo DESPUES de que un agente termine de desarrollar nuevas funcionalidades (componentes React, endpoints FastAPI).
 tools: Bash, Read, Glob, Grep
+color: green
 model: sonnet
 ---
 
