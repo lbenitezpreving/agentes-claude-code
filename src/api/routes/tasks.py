@@ -38,6 +38,7 @@ async def create_task(data: TaskCreate):
         "id": _next_id,
         "name": data.name,
         "description": data.description,
+        "project_id": data.project_id,
         "completed": False,
         "created_at": datetime.now(UTC),
         "updated_at": None,

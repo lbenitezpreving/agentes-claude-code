@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import TaskList, { Task } from './TaskList';
+import TaskList, { Task, Project } from './TaskList';
+
+const mockProjects: Project[] = [
+  { id: 1, name: 'Trabajo', color: '#3498db' },
+  { id: 2, name: 'Personal', color: '#2ecc71' },
+];
 
 const mockTasks: Task[] = [
   {
@@ -8,14 +13,22 @@ const mockTasks: Task[] = [
     name: 'Tarea 1',
     description: 'Descripción de tarea 1',
     completed: false,
+    project_id: 1,
     created_at: '2024-01-01T00:00:00Z',
   },
   {
     id: 2,
     name: 'Tarea 2',
     completed: true,
+    project_id: 2,
     created_at: '2024-01-02T00:00:00Z',
     completed_at: '2024-01-03T14:30:00Z',
+  },
+  {
+    id: 3,
+    name: 'Tarea sin proyecto',
+    completed: false,
+    created_at: '2024-01-04T00:00:00Z',
   },
 ];
 
@@ -65,6 +78,16 @@ describe('TaskList', () => {
     expect(mockDelete).toHaveBeenCalledWith(1);
   });
 
+  it('calls onTaskEdit when edit button clicked', () => {
+    const mockEdit = vi.fn();
+    render(<TaskList tasks={mockTasks} onTaskEdit={mockEdit} />);
+
+    const editButtons = screen.getAllByRole('button', { name: /editar/i });
+    fireEvent.click(editButtons[0]);
+
+    expect(mockEdit).toHaveBeenCalledWith(mockTasks[0]);
+  });
+
   it('applies custom className', () => {
     const { container } = render(
       <TaskList tasks={mockTasks} className="custom-class" />
@@ -98,5 +121,26 @@ describe('TaskList', () => {
 
     expect(screen.getByText(/Completada el 03\/01\/2024/)).toBeInTheDocument();
     expect(screen.queryAllByText(/Completada el/)).toHaveLength(1);
+  });
+
+  it('shows project badge when task has project_id', () => {
+    render(<TaskList tasks={mockTasks} projects={mockProjects} />);
+
+    expect(screen.getByText('Trabajo')).toBeInTheDocument();
+    expect(screen.getByText('Personal')).toBeInTheDocument();
+  });
+
+  it('does not show project badge when task has no project_id', () => {
+    const tasksWithoutProject = [mockTasks[2]];
+    render(<TaskList tasks={tasksWithoutProject} projects={mockProjects} />);
+
+    expect(screen.queryByText('Trabajo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Personal')).not.toBeInTheDocument();
+  });
+
+  it('does not show edit button when onTaskEdit is not provided', () => {
+    render(<TaskList tasks={mockTasks} />);
+
+    expect(screen.queryByRole('button', { name: /editar/i })).not.toBeInTheDocument();
   });
 });

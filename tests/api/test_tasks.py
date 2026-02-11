@@ -138,3 +138,34 @@ class TestTasksEndpoints:
         """Test DELETE /tasks/{id} cuando no existe."""
         response = client.delete("/tasks/999")
         assert response.status_code == 404
+
+    def test_create_task_with_project_id(self, client):
+        """Test POST /tasks con project_id."""
+        data = {"name": "Tarea con proyecto", "project_id": 1}
+        response = client.post("/tasks/", json=data)
+
+        assert response.status_code == 201
+        assert response.json()["project_id"] == 1
+
+    def test_create_task_without_project_id(self, client):
+        """Test POST /tasks sin project_id."""
+        data = {"name": "Tarea sin proyecto"}
+        response = client.post("/tasks/", json=data)
+
+        assert response.status_code == 201
+        assert response.json()["project_id"] is None
+
+    def test_update_task_project_id(self, client):
+        """Test PUT /tasks/{id} actualizando project_id."""
+        # Crear tarea sin proyecto
+        create_response = client.post("/tasks/", json={"name": "Test"})
+        task_id = create_response.json()["id"]
+
+        # Actualizar con project_id
+        response = client.put(f"/tasks/{task_id}", json={"project_id": 2})
+        assert response.status_code == 200
+        assert response.json()["project_id"] == 2
+
+        # Quitar project_id
+        response = client.put(f"/tasks/{task_id}", json={"project_id": None})
+        assert response.json()["project_id"] is None

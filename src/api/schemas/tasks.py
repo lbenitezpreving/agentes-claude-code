@@ -8,6 +8,7 @@ class TaskBase(BaseModel):
     """Schema base con campos comunes."""
     name: str = Field(..., min_length=1, max_length=100, description="Nombre de la tarea")
     description: Optional[str] = Field(None, max_length=500, description="Descripción opcional")
+    project_id: Optional[int] = Field(None, description="ID del proyecto asociado")
 
 
 class TaskCreate(TaskBase):
@@ -20,6 +21,7 @@ class TaskUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
     completed: Optional[bool] = Field(None, description="Estado de completado")
+    project_id: Optional[int] = Field(None, description="ID del proyecto asociado")
 
 
 class TaskResponse(TaskBase):

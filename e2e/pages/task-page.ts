@@ -5,22 +5,38 @@ export class TaskPage {
   readonly header: Locator;
   readonly taskNameInput: Locator;
   readonly taskDescInput: Locator;
+  readonly projectSelect: Locator;
   readonly submitButton: Locator;
   readonly taskList: Locator;
   readonly loadingIndicator: Locator;
   readonly emptyMessage: Locator;
   readonly errorMessage: Locator;
+  readonly editPanel: Locator;
+  readonly editPanelNameInput: Locator;
+  readonly editPanelDescInput: Locator;
+  readonly editPanelProjectSelect: Locator;
+  readonly editPanelSaveButton: Locator;
+  readonly editPanelCancelButton: Locator;
+  readonly editPanelCloseButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.header = page.locator('h1');
     this.taskNameInput = page.locator('input[placeholder="Nueva tarea..."]');
     this.taskDescInput = page.locator('input[placeholder*="Descripcion"]');
+    this.projectSelect = page.locator('form select');
     this.submitButton = page.locator('button[type="submit"]');
     this.taskList = page.locator('ul');
     this.loadingIndicator = page.getByText('Cargando tareas...');
     this.emptyMessage = page.getByText('No hay tareas');
     this.errorMessage = page.locator('[class*="error"]');
+    this.editPanel = page.locator('[class*="panel"]');
+    this.editPanelNameInput = page.locator('#task-name');
+    this.editPanelDescInput = page.locator('#task-description');
+    this.editPanelProjectSelect = page.locator('#task-project');
+    this.editPanelSaveButton = page.getByRole('button', { name: 'Guardar' });
+    this.editPanelCancelButton = page.getByRole('button', { name: 'Cancelar' });
+    this.editPanelCloseButton = page.locator('[aria-label="Cerrar panel"]');
   }
 
   async goto() {
@@ -32,10 +48,13 @@ export class TaskPage {
     await expect(this.loadingIndicator).not.toBeVisible({ timeout: 10000 });
   }
 
-  async createTask(name: string, description?: string) {
+  async createTask(name: string, description?: string, projectName?: string) {
     await this.taskNameInput.fill(name);
     if (description) {
       await this.taskDescInput.fill(description);
+    }
+    if (projectName) {
+      await this.projectSelect.selectOption({ label: projectName });
     }
     await this.submitButton.click();
   }
@@ -52,12 +71,24 @@ export class TaskPage {
     return this.getTaskItem(taskName).locator('button[aria-label*="Eliminar"]');
   }
 
+  getTaskEditButton(taskName: string): Locator {
+    return this.getTaskItem(taskName).locator('button[aria-label*="Editar"]');
+  }
+
+  getTaskProjectBadge(taskName: string): Locator {
+    return this.getTaskItem(taskName).locator('[class*="projectBadge"]');
+  }
+
   async toggleTask(taskName: string) {
     await this.getTaskCheckbox(taskName).click();
   }
 
   async deleteTask(taskName: string) {
     await this.getTaskDeleteButton(taskName).click();
+  }
+
+  async editTask(taskName: string) {
+    await this.getTaskEditButton(taskName).click();
   }
 
   async expectTaskExists(taskName: string) {
@@ -75,6 +106,17 @@ export class TaskPage {
     } else {
       await expect(checkbox).not.toBeChecked();
     }
+  }
+
+  async expectTaskHasProject(taskName: string, projectName: string) {
+    const badge = this.getTaskProjectBadge(taskName);
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText(projectName);
+  }
+
+  async expectTaskHasNoProject(taskName: string) {
+    const badge = this.getTaskProjectBadge(taskName);
+    await expect(badge).not.toBeVisible();
   }
 
   async getTaskCount(): Promise<number> {
@@ -100,5 +142,41 @@ export class TaskPage {
     } else {
       await expect(completedDate).not.toBeVisible();
     }
+  }
+
+  async expectEditPanelOpen() {
+    await expect(this.editPanel).toBeVisible();
+  }
+
+  async expectEditPanelClosed() {
+    await expect(this.editPanel).not.toBeVisible();
+  }
+
+  async fillEditPanel(name?: string, description?: string, projectName?: string) {
+    if (name !== undefined) {
+      await this.editPanelNameInput.fill(name);
+    }
+    if (description !== undefined) {
+      await this.editPanelDescInput.fill(description);
+    }
+    if (projectName !== undefined) {
+      if (projectName === '') {
+        await this.editPanelProjectSelect.selectOption({ value: '' });
+      } else {
+        await this.editPanelProjectSelect.selectOption({ label: projectName });
+      }
+    }
+  }
+
+  async saveEditPanel() {
+    await this.editPanelSaveButton.click();
+  }
+
+  async cancelEditPanel() {
+    await this.editPanelCancelButton.click();
+  }
+
+  async closeEditPanel() {
+    await this.editPanelCloseButton.click();
   }
 }

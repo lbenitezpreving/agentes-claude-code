@@ -18,11 +18,12 @@
 
 .task {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   padding: 1rem;
   border-bottom: 1px solid #eee;
   gap: 0.5rem;
   position: relative;
+  background: white;
 }
 
 .task:last-child {
@@ -32,6 +33,13 @@
 .task.completed .taskName {
   text-decoration: line-through;
   color: #999;
+}
+
+.taskContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .taskLabel {
@@ -50,6 +58,15 @@
 
 .taskName {
   font-size: 1rem;
+  font-weight: 500;
+}
+
+.projectBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: white;
   font-weight: 500;
 }
 
@@ -73,19 +90,29 @@
   font-style: italic;
 }
 
-.deleteButton {
+.taskActions {
   position: absolute;
   right: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  gap: 0.25rem;
+}
+
+.editButton,
+.deleteButton {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: #ccc;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   line-height: 1;
   transition: color 0.2s;
+}
+
+.editButton:hover {
+  color: #3498db;
 }
 
 .deleteButton:hover {

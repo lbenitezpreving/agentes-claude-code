@@ -116,4 +116,76 @@ test.describe('CRUD de Tareas', () => {
 
     await taskPage.expectTaskHasCompletedDate(taskName, false);
   });
+
+  test('debe mostrar selector de proyectos en el formulario', async () => {
+    await expect(taskPage.projectSelect).toBeVisible();
+    await expect(taskPage.projectSelect).toContainText('Sin proyecto');
+    await expect(taskPage.projectSelect).toContainText('Trabajo');
+    await expect(taskPage.projectSelect).toContainText('Personal');
+  });
+
+  test('debe crear tarea con proyecto seleccionado', async () => {
+    const taskName = `Task con proyecto ${Date.now()}`;
+
+    await taskPage.createTask(taskName, undefined, 'Trabajo');
+
+    await taskPage.expectTaskExists(taskName);
+    await taskPage.expectTaskHasProject(taskName, 'Trabajo');
+  });
+
+  test('debe crear tarea sin proyecto', async () => {
+    const taskName = `Task sin proyecto ${Date.now()}`;
+
+    await taskPage.createTask(taskName);
+
+    await taskPage.expectTaskExists(taskName);
+    await taskPage.expectTaskHasNoProject(taskName);
+  });
+
+  test('debe abrir panel de edicion al hacer clic en editar', async () => {
+    const taskName = `Task editar ${Date.now()}`;
+
+    await taskPage.createTask(taskName);
+    await taskPage.editTask(taskName);
+
+    await taskPage.expectEditPanelOpen();
+  });
+
+  test('debe cerrar panel de edicion con boton cancelar', async () => {
+    const taskName = `Task cancelar ${Date.now()}`;
+
+    await taskPage.createTask(taskName);
+    await taskPage.editTask(taskName);
+    await taskPage.expectEditPanelOpen();
+
+    await taskPage.cancelEditPanel();
+
+    await taskPage.expectEditPanelClosed();
+  });
+
+  test('debe editar nombre de tarea', async () => {
+    const taskName = `Task original ${Date.now()}`;
+    const newName = `Task editada ${Date.now()}`;
+
+    await taskPage.createTask(taskName);
+    await taskPage.editTask(taskName);
+    await taskPage.fillEditPanel(newName);
+    await taskPage.saveEditPanel();
+
+    await taskPage.expectTaskExists(newName);
+    await taskPage.expectTaskNotExists(taskName);
+  });
+
+  test('debe editar proyecto de tarea existente', async () => {
+    const taskName = `Task cambiar proyecto ${Date.now()}`;
+
+    await taskPage.createTask(taskName, undefined, 'Trabajo');
+    await taskPage.expectTaskHasProject(taskName, 'Trabajo');
+
+    await taskPage.editTask(taskName);
+    await taskPage.fillEditPanel(undefined, undefined, 'Personal');
+    await taskPage.saveEditPanel();
+
+    await taskPage.expectTaskHasProject(taskName, 'Personal');
+  });
 });

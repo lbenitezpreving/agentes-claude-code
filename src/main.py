@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes.tasks import router as tasks_router
+from .api.routes.projects import router as projects_router
 
 app = FastAPI(
     title="API de Aprendizaje Claude Code",
@@ -21,6 +22,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(tasks_router)
+app.include_router(projects_router)
 
 
 @app.get("/")
