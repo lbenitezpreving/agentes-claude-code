@@ -1,9 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import TaskList, { Task } from './components/TaskList';
+// import TaskList, { Task } from './components/TaskList';
+import KanbanBoard, { TaskStatus } from './components/KanbanBoard';
 import TaskEditPanel, { Project, TaskData } from './components/TaskEditPanel';
 import styles from './App.module.css';
 
 const API_URL = '/api';
+
+interface Task {
+  id: number;
+  name: string;
+  description: string;
+  completed: boolean;
+  project_id: number | null;
+  created_at: string;
+  completed_at: string | null;
+  status: TaskStatus;
+}
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -45,6 +57,21 @@ function App() {
     fetchTasks();
     fetchProjects();
   }, [fetchTasks, fetchProjects]);
+
+  const handleStatusChange = async (taskId: number, newStatus: TaskStatus) => {
+    try {
+      const response = await fetch(`${API_URL}/tasks/${taskId}/status?new_status=${newStatus}`, {
+        method: 'PATCH',
+      });
+      if (!response.ok) throw new Error('Error al actualizar');
+      const updated = await response.json();
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? updated : t))
+      );
+    } catch (err) {
+      setError('Error al cambiar el estado de la tarea');
+    }
+  };
 
   const handleToggle = async (taskId: number) => {
     try {
@@ -131,7 +158,7 @@ function App() {
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <h1>Lista de Tareas</h1>
+        <h1>Tablero Kanban</h1>
         <p>Demo de Claude Code - React + FastAPI</p>
       </header>
 
@@ -170,14 +197,14 @@ function App() {
 
         {error && <div className={styles.error}>{error}</div>}
 
-        <TaskList
+        <KanbanBoard
           tasks={tasks}
-          projects={projects}
+          projects={projects.map(p => ({ id: p.id, name: p.name, description: p.description || '' }))}
           loading={loading}
+          onTaskStatusChange={handleStatusChange}
           onTaskToggle={handleToggle}
           onTaskDelete={handleDelete}
           onTaskEdit={handleEdit}
-          emptyMessage="No hay tareas. Crea una nueva!"
         />
       </main>
 

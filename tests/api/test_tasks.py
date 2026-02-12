@@ -169,3 +169,152 @@ class TestTasksEndpoints:
         # Quitar project_id
         response = client.put(f"/tasks/{task_id}", json={"project_id": None})
         assert response.json()["project_id"] is None
+
+
+class TestTaskStatus:
+    """Tests para la funcionalidad de estados Kanban (TaskStatus)."""
+
+    def test_create_task_has_status_backlog(self, client):
+        """Test que una tarea nueva tiene status='backlog' por defecto."""
+        data = {"name": "Tarea nueva"}
+        response = client.post("/tasks/", json=data)
+
+        assert response.status_code == 201
+        result = response.json()
+        assert result["status"] == "backlog"
+        assert result["completed"] is False
+        assert result["completed_at"] is None
+
+    def test_update_task_status_to_doing(self, client):
+        """Test actualizar status a 'doing' mantiene completed=False."""
+        # Crear tarea
+        create_response = client.post("/tasks/", json={"name": "Test doing"})
+        task_id = create_response.json()["id"]
+
+        # Actualizar status a "doing"
+        response = client.put(
+            f"/tasks/{task_id}",
+            json={"status": "doing"}
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+        assert result["status"] == "doing"
+        assert result["completed"] is False
+        assert result["completed_at"] is None
+
+    def test_update_task_status_to_done_sets_completed(self, client):
+        """Test actualizar status a 'done' sincroniza completed=True."""
+        # Crear tarea
+        create_response = client.post("/tasks/", json={"name": "Test done"})
+        task_id = create_response.json()["id"]
+
+        # Actualizar status a "done"
+        response = client.put(
+            f"/tasks/{task_id}",
+            json={"status": "done"}
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+        assert result["status"] == "done"
+        assert result["completed"] is True
+        assert result["completed_at"] is not None
+
+    def test_update_completed_true_sets_status_done(self, client):
+        """Test actualizar completed=True sincroniza status='done'."""
+        # Crear tarea
+        create_response = client.post("/tasks/", json={"name": "Test completed"})
+        task_id = create_response.json()["id"]
+
+        # Actualizar completed a True
+        response = client.put(
+            f"/tasks/{task_id}",
+            json={"completed": True}
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+        assert result["completed"] is True
+        assert result["status"] == "done"
+        assert result["completed_at"] is not None
+
+    def test_patch_status_endpoint(self, client):
+        """Test endpoint PATCH /tasks/{id}/status para cambiar status rápidamente."""
+        # Crear tarea
+        create_response = client.post("/tasks/", json={"name": "Test patch status"})
+        task_id = create_response.json()["id"]
+
+        # Cambiar status a "doing" usando PATCH
+        response = client.patch(
+            f"/tasks/{task_id}/status",
+            params={"new_status": "doing"}
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+        assert result["status"] == "doing"
+        assert result["completed"] is False
+        assert result["completed_at"] is None
+
+        # Cambiar status a "done" usando PATCH
+        response = client.patch(
+            f"/tasks/{task_id}/status",
+            params={"new_status": "done"}
+        )
+
+        assert response.status_code == 200
+        result = response.json()
+        assert result["status"] == "done"
+        assert result["completed"] is True
+        assert result["completed_at"] is not None
+
+    def test_status_completed_bidirectional_sync(self, client):
+        """Test sincronización bidireccional entre status y completed."""
+        # Crear tarea (status=backlog, completed=False)
+        create_response = client.post("/tasks/", json={"name": "Sync test"})
+        task_id = create_response.json()["id"]
+        result = create_response.json()
+        assert result["status"] == "backlog"
+        assert result["completed"] is False
+
+        # Caso 1: status → completed (backlog → doing)
+        response = client.put(f"/tasks/{task_id}", json={"status": "doing"})
+        result = response.json()
+        assert result["status"] == "doing"
+        assert result["completed"] is False
+        assert result["completed_at"] is None
+
+        # Caso 2: status → completed (doing → done)
+        response = client.put(f"/tasks/{task_id}", json={"status": "done"})
+        result = response.json()
+        assert result["status"] == "done"
+        assert result["completed"] is True
+        assert result["completed_at"] is not None
+
+        # Caso 3: completed → status (True → done, ya está en done)
+        response = client.put(f"/tasks/{task_id}", json={"completed": True})
+        result = response.json()
+        assert result["status"] == "done"
+        assert result["completed"] is True
+
+        # Caso 4: completed → status (False → backlog)
+        response = client.put(f"/tasks/{task_id}", json={"completed": False})
+        result = response.json()
+        assert result["status"] == "backlog"
+        assert result["completed"] is False
+        assert result["completed_at"] is None
+
+        # Caso 5: status → completed (backlog → done directo)
+        response = client.put(f"/tasks/{task_id}", json={"status": "done"})
+        result = response.json()
+        assert result["status"] == "done"
+        assert result["completed"] is True
+        assert result["completed_at"] is not None
+
+        # Caso 6: status → completed (done → backlog)
+        response = client.put(f"/tasks/{task_id}", json={"status": "backlog"})
+        result = response.json()
+        assert result["status"] == "backlog"
+        assert result["completed"] is False
+        assert result["completed_at"] is None

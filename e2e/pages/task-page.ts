@@ -18,6 +18,9 @@ export class TaskPage {
   readonly editPanelSaveButton: Locator;
   readonly editPanelCancelButton: Locator;
   readonly editPanelCloseButton: Locator;
+  readonly backlogColumn: Locator;
+  readonly doingColumn: Locator;
+  readonly doneColumn: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -37,6 +40,9 @@ export class TaskPage {
     this.editPanelSaveButton = page.getByRole('button', { name: 'Guardar' });
     this.editPanelCancelButton = page.getByRole('button', { name: 'Cancelar' });
     this.editPanelCloseButton = page.locator('[aria-label="Cerrar panel"]');
+    this.backlogColumn = page.locator('[data-column="backlog"]');
+    this.doingColumn = page.locator('[data-column="doing"]');
+    this.doneColumn = page.locator('[data-column="done"]');
   }
 
   async goto() {
@@ -178,5 +184,44 @@ export class TaskPage {
 
   async closeEditPanel() {
     await this.editPanelCloseButton.click();
+  }
+
+  async dragTaskToColumn(taskName: string, targetStatus: 'backlog' | 'doing' | 'done') {
+    // Buscar la tarjeta por su nombre
+    const card = this.page.locator('[data-testid="task-card"]').filter({ hasText: taskName });
+
+    // Determinar columna destino
+    let targetColumn: Locator;
+    if (targetStatus === 'backlog') targetColumn = this.backlogColumn;
+    else if (targetStatus === 'doing') targetColumn = this.doingColumn;
+    else targetColumn = this.doneColumn;
+
+    // Simular drag and drop
+    await card.dragTo(targetColumn);
+  }
+
+  async expectTaskInColumn(taskName: string, expectedStatus: 'backlog' | 'doing' | 'done') {
+    let column: Locator;
+    if (expectedStatus === 'backlog') column = this.backlogColumn;
+    else if (expectedStatus === 'doing') column = this.doingColumn;
+    else column = this.doneColumn;
+
+    // Verificar que la tarjeta está en la columna esperada
+    const card = column.locator('[data-testid="task-card"]').filter({ hasText: taskName });
+    await expect(card).toBeVisible();
+  }
+
+  getTaskCard(taskName: string): Locator {
+    return this.page.locator('[data-testid="task-card"]').filter({ hasText: taskName });
+  }
+
+  async expectColumnTaskCount(status: 'backlog' | 'doing' | 'done', expectedCount: number) {
+    let column: Locator;
+    if (status === 'backlog') column = this.backlogColumn;
+    else if (status === 'doing') column = this.doingColumn;
+    else column = this.doneColumn;
+
+    const cards = column.locator('[data-testid="task-card"]');
+    await expect(cards).toHaveCount(expectedCount);
   }
 }

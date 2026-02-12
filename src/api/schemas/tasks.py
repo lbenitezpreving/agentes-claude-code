@@ -2,6 +2,14 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from datetime import datetime, UTC
+from enum import Enum
+
+
+class TaskStatus(str, Enum):
+    """Estados posibles de una tarea en el tablero Kanban."""
+    BACKLOG = "backlog"
+    DOING = "doing"
+    DONE = "done"
 
 
 class TaskBase(BaseModel):
@@ -9,6 +17,7 @@ class TaskBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Nombre de la tarea")
     description: Optional[str] = Field(None, max_length=500, description="Descripción opcional")
     project_id: Optional[int] = Field(None, description="ID del proyecto asociado")
+    status: TaskStatus = Field(default=TaskStatus.BACKLOG, description="Estado de la tarea en el tablero Kanban")
 
 
 class TaskCreate(TaskBase):
@@ -22,6 +31,7 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     completed: Optional[bool] = Field(None, description="Estado de completado")
     project_id: Optional[int] = Field(None, description="ID del proyecto asociado")
+    status: Optional[TaskStatus] = Field(None, description="Estado de la tarea en el tablero Kanban")
 
 
 class TaskResponse(TaskBase):
@@ -33,3 +43,4 @@ class TaskResponse(TaskBase):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = Field(None, description="Fecha de completado")
+    status: TaskStatus = Field(default=TaskStatus.BACKLOG, description="Estado de la tarea en el tablero Kanban")
