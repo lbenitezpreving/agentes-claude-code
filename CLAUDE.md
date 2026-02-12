@@ -3,7 +3,7 @@
 ## Stack Tecnológico
 - Frontend: React 18 + TypeScript + Vite
 - Backend: Python 3.11 + FastAPI
-- Base de Datos: SQLite + SQLAlchemy 2.0 async (actualmente en memoria, migración disponible)
+- Base de Datos: SQLite + SQLAlchemy 2.0 async
 - Testing: Vitest (front), pytest (back), Playwright (E2E)
 
 ## Convenciones
@@ -17,15 +17,19 @@
 src/
 ├── components/          # Componentes React
 ├── api/
+│   ├── database.py     # Configuración de BD SQLAlchemy
+│   ├── models/         # Modelos ORM (Project, Task)
 │   ├── routes/         # Routers FastAPI
-│   └── schemas/        # Schemas Pydantic
+│   ├── schemas/        # Schemas Pydantic
+│   └── migrate_data.py # Script de migración de datos
 tests/
 ├── components/         # Tests de React
-└── api/               # Tests de API
+└── api/               # Tests de API (async)
 e2e/
 ├── pages/             # Page Objects para Playwright
 └── *.spec.ts          # Tests E2E
 docs/                   # Documentacion generada
+backups/               # Backups de archivos pre-migración
 ```
 
 ## Agentes Disponibles
@@ -61,17 +65,25 @@ docs/                   # Documentacion generada
 - Async para operaciones I/O
 - Documentar endpoints con docstrings
 
-## Migración a SQLite
+## Base de Datos
 
-**Estado actual:** El proyecto usa almacenamiento en memoria (diccionarios). Los datos se pierden al reiniciar.
+**Configuración actual:** SQLite con SQLAlchemy 2.0 async
 
-**Para migrar a persistencia SQLite:**
-1. Usar el agente `sqlite-manager` para migración automática completa
-2. O usar el skill `/sqlite-setup` para templates y guías de mejores prácticas
+- **Ubicación:** `./app.db`
+- **Configuración:** `src/api/database.py`
+- **Modelos ORM:** `src/api/models/`
+  - `Project`: Proyectos con nombre y color
+  - `Task`: Tareas con status Kanban, completed, project_id (FK opcional)
+- **Datos iniciales:** 4 proyectos hardcodeados (Trabajo, Personal, Estudios, Hogar)
 
-**Beneficios de la migración:**
+**Características:**
 - Persistencia real entre reinicios
-- Preparación para producción
-- Queries SQL eficientes
-- Relaciones entre modelos (FK)
-- Migraciones versionadas (futuro con Alembic)
+- Queries SQL async eficientes
+- Relaciones FK (Task → Project con ondelete="SET NULL")
+- Sincronización bidireccional `completed ↔ status` en tasks
+- Tests async con BD en memoria (`:memory:`)
+
+**Re-migrar datos:**
+```bash
+python -m src.api.migrate_data
+```

@@ -30,6 +30,12 @@ coverage/
 .coverage
 htmlcov/
 
+# Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
 # Playwright
 /test-results/
 /playwright-report/
