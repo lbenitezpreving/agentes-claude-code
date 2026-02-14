@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from datetime import datetime, UTC
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas.tasks import TaskCreate, TaskUpdate, TaskResponse, TaskStatus
@@ -18,8 +19,9 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.get("/", response_model=List[TaskResponse])
 async def get_all_tasks(db: AsyncSession = Depends(get_db)):
-    """Obtiene todas las tareas desde la base de datos."""
-    query = select(Task)
+    """Obtiene todas las tareas con sus subtareas desde la base de datos."""
+    # Eager loading de subtasks para evitar N+1 queries
+    query = select(Task).options(selectinload(Task.subtasks))
     result = await db.execute(query)
     tasks = result.scalars().all()
 
@@ -28,8 +30,9 @@ async def get_all_tasks(db: AsyncSession = Depends(get_db)):
 
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    """Obtiene una tarea por ID."""
-    query = select(Task).where(Task.id == task_id)
+    """Obtiene una tarea por ID con sus subtareas."""
+    # Eager loading de subtasks
+    query = select(Task).options(selectinload(Task.subtasks)).where(Task.id == task_id)
     result = await db.execute(query)
     task = result.scalar_one_or_none()
 
@@ -59,7 +62,7 @@ async def create_task(data: TaskCreate, db: AsyncSession = Depends(get_db)):
     # Guardar en BD
     db.add(db_task)
     await db.flush()
-    await db.refresh(db_task)
+    await db.refresh(db_task, ["subtasks"])
 
     return TaskResponse.model_validate(db_task)
 
@@ -126,7 +129,7 @@ async def update_task(
     db_task.updated_at = datetime.now(UTC)
 
     await db.flush()
-    await db.refresh(db_task)
+    await db.refresh(db_task, ["subtasks"])
 
     return TaskResponse.model_validate(db_task)
 
@@ -154,7 +157,7 @@ async def toggle_task(task_id: int, db: AsyncSession = Depends(get_db)):
     db_task.status = "done" if db_task.completed else "backlog"
 
     await db.flush()
-    await db.refresh(db_task)
+    await db.refresh(db_task, ["subtasks"])
 
     return TaskResponse.model_validate(db_task)
 
@@ -193,7 +196,7 @@ async def update_task_status(
     db_task.updated_at = datetime.now(UTC)
 
     await db.flush()
-    await db.refresh(db_task)
+    await db.refresh(db_task, ["subtasks"])
 
     return TaskResponse.model_validate(db_task)
 

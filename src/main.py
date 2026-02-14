@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.database import init_db
 from .api.routes.tasks import router as tasks_router
 from .api.routes.projects import router as projects_router
+from .api.routes.subtasks import router as subtasks_router
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ app.add_middleware(
 # Include routers
 app.include_router(tasks_router)
 app.include_router(projects_router)
+app.include_router(subtasks_router)
 
 
 @app.get("/")

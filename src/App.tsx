@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 // import TaskList, { Task } from './components/TaskList';
 import KanbanBoard, { TaskStatus } from './components/KanbanBoard';
 import TaskEditPanel, { Project, TaskData } from './components/TaskEditPanel';
+import { Subtask } from './components/SubtaskChecklist';
 import styles from './App.module.css';
 
 const API_URL = '/api';
@@ -15,11 +16,13 @@ interface Task {
   created_at: string;
   completed_at: string | null;
   status: TaskStatus;
+  subtasks: Subtask[];
 }
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
@@ -53,10 +56,30 @@ function App() {
     }
   }, []);
 
+  const fetchSubtasks = useCallback(async (taskId: number) => {
+    try {
+      const response = await fetch(`${API_URL}/tasks/${taskId}/subtasks`);
+      if (!response.ok) throw new Error('Error al cargar subtareas');
+      const data = await response.json();
+      setSubtasks(data);
+    } catch (err) {
+      console.error('Error cargando subtareas:', err);
+      setSubtasks([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchTasks();
     fetchProjects();
   }, [fetchTasks, fetchProjects]);
+
+  useEffect(() => {
+    if (editingTask) {
+      fetchSubtasks(editingTask.id);
+    } else {
+      setSubtasks([]);
+    }
+  }, [editingTask, fetchSubtasks]);
 
   const handleStatusChange = async (taskId: number, newStatus: TaskStatus) => {
     try {
@@ -155,6 +178,65 @@ function App() {
     }
   };
 
+  const handleSubtaskToggle = async (subtaskId: number, taskId?: number) => {
+    const targetTaskId = taskId || editingTask?.id;
+    if (!targetTaskId) return;
+
+    try {
+      const response = await fetch(`${API_URL}/tasks/${targetTaskId}/subtasks/${subtaskId}/toggle`, {
+        method: 'PATCH',
+      });
+      if (!response.ok) throw new Error('Error al actualizar subtarea');
+
+      // Refrescar tasks (incluye subtasks)
+      await fetchTasks();
+
+      // Si estamos en el panel de edición, también refrescar subtasks
+      if (editingTask && editingTask.id === targetTaskId) {
+        await fetchSubtasks(targetTaskId);
+      }
+    } catch (err) {
+      setError('Error al actualizar la subtarea');
+    }
+  };
+
+  const handleSubtaskAdd = async (name: string) => {
+    if (!editingTask) return;
+
+    try {
+      const response = await fetch(`${API_URL}/tasks/${editingTask.id}/subtasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) throw new Error('Error al crear subtarea');
+
+      // Refrescar subtasks
+      await fetchSubtasks(editingTask.id);
+    } catch (err) {
+      setError('Error al crear la subtarea');
+    }
+  };
+
+  const handleSubtaskDelete = async (subtaskId: number) => {
+    if (!editingTask) return;
+
+    try {
+      const response = await fetch(`${API_URL}/tasks/${editingTask.id}/subtasks/${subtaskId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Error al eliminar subtarea');
+
+      // Refrescar subtasks y tasks (el status puede haber cambiado)
+      await Promise.all([
+        fetchSubtasks(editingTask.id),
+        fetchTasks(),
+      ]);
+    } catch (err) {
+      setError('Error al eliminar la subtarea');
+    }
+  };
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
@@ -199,12 +281,13 @@ function App() {
 
         <KanbanBoard
           tasks={tasks}
-          projects={projects.map(p => ({ id: p.id, name: p.name, description: p.description || '' }))}
+          projects={projects.map(p => ({ id: p.id, name: p.name, description: '' }))}
           loading={loading}
           onTaskStatusChange={handleStatusChange}
           onTaskToggle={handleToggle}
           onTaskDelete={handleDelete}
           onTaskEdit={handleEdit}
+          onSubtaskToggle={handleSubtaskToggle}
         />
       </main>
 
@@ -214,6 +297,10 @@ function App() {
         isOpen={isPanelOpen}
         onClose={handleClosePanel}
         onSave={handleSaveEdit}
+        subtasks={subtasks}
+        onSubtaskToggle={handleSubtaskToggle}
+        onSubtaskAdd={handleSubtaskAdd}
+        onSubtaskDelete={handleSubtaskDelete}
       />
     </div>
   );

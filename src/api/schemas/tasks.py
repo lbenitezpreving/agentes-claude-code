@@ -1,6 +1,6 @@
 """Schemas Pydantic para el recurso tasks."""
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, UTC
 from enum import Enum
 
@@ -44,3 +44,18 @@ class TaskResponse(TaskBase):
     updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = Field(None, description="Fecha de completado")
     status: TaskStatus = Field(default=TaskStatus.BACKLOG, description="Estado de la tarea en el tablero Kanban")
+    subtasks: List["SubtaskResponseNested"] = Field(default_factory=list, description="Lista de subtareas")
+
+
+# Schema simplificado para subtasks anidadas (evitar importación circular)
+class SubtaskResponseNested(BaseModel):
+    """Schema simplificado de Subtask para incluir en TaskResponse."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    task_id: int
+    name: str
+    completed: bool
+    position: int
+    created_at: datetime
+    completed_at: Optional[datetime] = None

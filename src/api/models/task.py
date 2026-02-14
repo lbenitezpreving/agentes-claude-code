@@ -1,12 +1,13 @@
 """Modelo ORM para Task."""
 from datetime import datetime, UTC
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 from sqlalchemy import String, Integer, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
     from .project import Project
+    from .subtask import Subtask
 
 
 class Task(Base):
@@ -47,10 +48,15 @@ class Task(Base):
         nullable=True
     )
 
-    # Relationship
+    # Relationships
     project: Mapped[Optional["Project"]] = relationship(
         "Project",
         back_populates="tasks"
+    )
+    subtasks: Mapped[List["Subtask"]] = relationship(
+        "Subtask",
+        back_populates="task",
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

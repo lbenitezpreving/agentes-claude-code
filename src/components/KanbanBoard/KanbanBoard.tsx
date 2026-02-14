@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SubtaskChecklist, { Subtask } from '../SubtaskChecklist';
 import styles from './KanbanBoard.module.css';
 
 export type TaskStatus = 'backlog' | 'doing' | 'done';
@@ -12,6 +13,7 @@ interface Task {
   created_at: string;
   completed_at: string | null;
   status: TaskStatus;
+  subtasks: Subtask[];
 }
 
 interface Project {
@@ -27,6 +29,7 @@ interface KanbanBoardProps {
   onTaskToggle?: (taskId: number) => void;
   onTaskDelete?: (taskId: number) => void;
   onTaskEdit?: (task: Task) => void;
+  onSubtaskToggle?: (subtaskId: number, taskId: number) => void;
   loading?: boolean;
 }
 
@@ -37,6 +40,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onTaskToggle,
   onTaskDelete,
   onTaskEdit,
+  onSubtaskToggle,
   loading = false,
 }) => {
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
@@ -141,6 +145,18 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     )}
                   </div>
                   <p className={styles.cardDescription}>{task.description}</p>
+
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <div className={styles.subtasksContainer}>
+                      <SubtaskChecklist
+                        taskId={task.id}
+                        subtasks={task.subtasks}
+                        onSubtaskToggle={(subtaskId) => onSubtaskToggle?.(subtaskId, task.id)}
+                        readonly={false}
+                      />
+                    </div>
+                  )}
+
                   <div className={styles.cardDates}>
                     <small>Creado: {formatDate(task.created_at)}</small>
                     {task.completed_at && (

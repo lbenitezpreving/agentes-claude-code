@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SubtaskChecklist, { Subtask } from '../SubtaskChecklist';
 import styles from './TaskEditPanel.module.css';
 
 export interface Project {
@@ -23,6 +24,10 @@ export interface TaskEditPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (taskId: number, data: { name: string; description?: string; project_id?: number }) => void;
+  subtasks?: Subtask[];
+  onSubtaskToggle?: (subtaskId: number) => void;
+  onSubtaskAdd?: (name: string) => void;
+  onSubtaskDelete?: (subtaskId: number) => void;
   className?: string;
 }
 
@@ -32,6 +37,10 @@ const TaskEditPanel: React.FC<TaskEditPanelProps> = ({
   isOpen,
   onClose,
   onSave,
+  subtasks = [],
+  onSubtaskToggle,
+  onSubtaskAdd,
+  onSubtaskDelete,
   className = '',
 }) => {
   const [name, setName] = useState('');
@@ -121,6 +130,16 @@ const TaskEditPanel: React.FC<TaskEditPanelProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className={styles.subtasksSection}>
+            <SubtaskChecklist
+              taskId={task.id}
+              subtasks={subtasks}
+              onSubtaskToggle={onSubtaskToggle}
+              onSubtaskAdd={onSubtaskAdd}
+              onSubtaskDelete={onSubtaskDelete}
+            />
           </div>
 
           <div className={styles.actions}>

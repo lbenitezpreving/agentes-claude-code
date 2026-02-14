@@ -88,6 +88,14 @@
   line-height: 1.4;
 }
 
+.subtasksContainer {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
 .cardDates {
   display: flex;
   flex-direction: column;
