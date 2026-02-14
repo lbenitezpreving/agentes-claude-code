@@ -163,18 +163,24 @@ class TestTasksEndpoints:
 
     @pytest.mark.asyncio
     async def test_delete_task(self, async_client):
-        """Test DELETE /tasks/{id}."""
+        """Test DELETE /tasks/{id} - Soft delete."""
         # Crear tarea
         create_response = await async_client.post("/tasks/", json={"name": "A eliminar"})
         task_id = create_response.json()["id"]
+        assert create_response.json()["deleted_at"] is None
 
-        # Eliminar
+        # Eliminar (soft delete)
         response = await async_client.delete(f"/tasks/{task_id}")
         assert response.status_code == 204
 
-        # Verificar que no existe
+        # Verificar que no existe sin show_deleted
         get_response = await async_client.get(f"/tasks/{task_id}")
         assert get_response.status_code == 404
+
+        # Verificar que existe con show_deleted y tiene deleted_at
+        get_response = await async_client.get(f"/tasks/{task_id}?show_deleted=true")
+        assert get_response.status_code == 200
+        assert get_response.json()["deleted_at"] is not None
 
     @pytest.mark.asyncio
     async def test_delete_task_not_found(self, async_client):

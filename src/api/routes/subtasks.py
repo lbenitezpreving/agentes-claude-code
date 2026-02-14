@@ -15,11 +15,12 @@ router = APIRouter(prefix="/tasks/{task_id}/subtasks", tags=["subtasks"])
 
 async def _auto_complete_task_if_needed(task_id: int, db: AsyncSession) -> None:
     """
-    Lógica de auto-completado de task basado en sus subtasks.
+    Lógica de auto-completado de task basado en sus subtasks ACTIVAS.
 
     Reglas:
-    - Si TODAS las subtasks están completed → task.completed=True, status="done"
-    - Si ALGUNA subtask está incompleta → task.completed=False, status="backlog"
+    - Si TODAS las subtasks activas están completed → task.completed=True, status="done"
+    - Si ALGUNA subtask activa está incompleta → task.completed=False, status="backlog"
+    - Subtasks eliminadas (deleted_at != NULL) se ignoran
 
     Args:
         task_id: ID de la tarea a verificar
@@ -33,16 +34,19 @@ async def _auto_complete_task_if_needed(task_id: int, db: AsyncSession) -> None:
     if task is None:
         return
 
-    # Obtener todas las subtasks de la tarea
-    subtasks_query = select(Subtask).where(Subtask.task_id == task_id)
+    # Obtener SOLO las subtasks ACTIVAS de la tarea
+    subtasks_query = select(Subtask).where(
+        Subtask.task_id == task_id,
+        Subtask.deleted_at.is_(None)  # Solo subtasks ACTIVAS
+    )
     subtasks_result = await db.execute(subtasks_query)
     subtasks = subtasks_result.scalars().all()
 
-    # Si no hay subtasks, no hacer nada
+    # Si no hay subtasks activas, no hacer nada
     if not subtasks:
         return
 
-    # Verificar si todas las subtasks están completas
+    # Verificar si todas las subtasks activas están completas
     all_completed = all(subtask.completed for subtask in subtasks)
 
     if all_completed:
@@ -63,19 +67,22 @@ async def _auto_complete_task_if_needed(task_id: int, db: AsyncSession) -> None:
 
 async def _get_task_or_404(task_id: int, db: AsyncSession) -> Task:
     """
-    Obtiene una tarea o lanza 404.
+    Obtiene una tarea ACTIVA o lanza 404.
 
     Args:
         task_id: ID de la tarea
         db: Sesión de base de datos
 
     Returns:
-        Task: La tarea encontrada
+        Task: La tarea encontrada (solo activas)
 
     Raises:
-        HTTPException: 404 si no existe
+        HTTPException: 404 si no existe o está eliminada
     """
-    query = select(Task).where(Task.id == task_id)
+    query = select(Task).where(
+        Task.id == task_id,
+        Task.deleted_at.is_(None)  # Solo tareas ACTIVAS
+    )
     result = await db.execute(query)
     task = result.scalar_one_or_none()
 
@@ -89,12 +96,17 @@ async def _get_task_or_404(task_id: int, db: AsyncSession) -> Task:
 
 
 @router.get("/", response_model=List[SubtaskResponse])
-async def get_task_subtasks(task_id: int, db: AsyncSession = Depends(get_db)):
+async def get_task_subtasks(
+    task_id: int,
+    show_deleted: bool = False,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Obtiene todas las subtasks de una tarea, ordenadas por position.
 
     Args:
         task_id: ID de la tarea padre
+        show_deleted: Si True, incluye subtasks eliminadas
         db: Sesión de base de datos
 
     Returns:
@@ -109,6 +121,11 @@ async def get_task_subtasks(task_id: int, db: AsyncSession = Depends(get_db)):
         .where(Subtask.task_id == task_id)
         .order_by(Subtask.position)
     )
+
+    # Filtrar eliminadas si show_deleted=False
+    if not show_deleted:
+        query = query.where(Subtask.deleted_at.is_(None))
+
     result = await db.execute(query)
     subtasks = result.scalars().all()
 
@@ -144,8 +161,16 @@ async def create_subtask(
 
     # Si no se especificó position, asignar al final
     if subtask_data.get("position") is None or subtask_data["position"] == 0:
-        # Obtener el máximo position actual
-        max_position_query = select(Subtask.position).where(Subtask.task_id == task_id).order_by(Subtask.position.desc()).limit(1)
+        # Obtener el máximo position actual (solo subtasks ACTIVAS)
+        max_position_query = (
+            select(Subtask.position)
+            .where(
+                Subtask.task_id == task_id,
+                Subtask.deleted_at.is_(None)  # Ignorar eliminadas
+            )
+            .order_by(Subtask.position.desc())
+            .limit(1)
+        )
         max_position_result = await db.execute(max_position_query)
         max_position = max_position_result.scalar_one_or_none()
         subtask_data["position"] = (max_position or 0) + 1
@@ -168,6 +193,7 @@ async def create_subtask(
 async def get_subtask(
     task_id: int,
     subtask_id: int,
+    show_deleted: bool = False,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -176,6 +202,7 @@ async def get_subtask(
     Args:
         task_id: ID de la tarea padre
         subtask_id: ID de la subtask
+        show_deleted: Si True, incluye subtasks eliminadas
         db: Sesión de base de datos
 
     Returns:
@@ -189,6 +216,11 @@ async def get_subtask(
         Subtask.id == subtask_id,
         Subtask.task_id == task_id
     )
+
+    # Filtrar eliminadas si show_deleted=False
+    if not show_deleted:
+        query = query.where(Subtask.deleted_at.is_(None))
+
     result = await db.execute(query)
     subtask = result.scalar_one_or_none()
 
@@ -223,10 +255,11 @@ async def update_subtask(
     # Verificar que la tarea existe
     await _get_task_or_404(task_id, db)
 
-    # Obtener subtask
+    # Obtener subtask (solo activas)
     query = select(Subtask).where(
         Subtask.id == subtask_id,
-        Subtask.task_id == task_id
+        Subtask.task_id == task_id,
+        Subtask.deleted_at.is_(None)  # Solo subtasks activas
     )
     result = await db.execute(query)
     db_subtask = result.scalar_one_or_none()
@@ -278,10 +311,11 @@ async def toggle_subtask(
     # Verificar que la tarea existe
     await _get_task_or_404(task_id, db)
 
-    # Obtener subtask
+    # Obtener subtask (solo activas)
     query = select(Subtask).where(
         Subtask.id == subtask_id,
-        Subtask.task_id == task_id
+        Subtask.task_id == task_id,
+        Subtask.deleted_at.is_(None)  # Solo subtasks activas
     )
     result = await db.execute(query)
     db_subtask = result.scalar_one_or_none()
@@ -312,7 +346,7 @@ async def delete_subtask(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Elimina una subtask.
+    Elimina una subtask (borrado lógico).
 
     Este endpoint ejecuta la lógica de auto-completado del task padre.
 
@@ -324,10 +358,11 @@ async def delete_subtask(
     # Verificar que la tarea existe
     await _get_task_or_404(task_id, db)
 
-    # Obtener subtask
+    # Obtener subtask (solo activas)
     query = select(Subtask).where(
         Subtask.id == subtask_id,
-        Subtask.task_id == task_id
+        Subtask.task_id == task_id,
+        Subtask.deleted_at.is_(None)  # Solo subtasks activas
     )
     result = await db.execute(query)
     db_subtask = result.scalar_one_or_none()
@@ -338,7 +373,8 @@ async def delete_subtask(
             detail=f"Subtask with id {subtask_id} not found for task {task_id}"
         )
 
-    await db.delete(db_subtask)
+    # Borrado lógico: marcar deleted_at
+    db_subtask.deleted_at = datetime.now(UTC)
 
     # CRÍTICO: Auto-completar task si es necesario después de eliminar
     await _auto_complete_task_if_needed(task_id, db)

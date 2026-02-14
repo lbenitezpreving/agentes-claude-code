@@ -47,6 +47,11 @@ class Task(Base):
         DateTime(timezone=True),
         nullable=True
     )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None
+    )
 
     # Relationships
     project: Mapped[Optional["Project"]] = relationship(

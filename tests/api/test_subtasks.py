@@ -256,7 +256,7 @@ class TestSubtasksEndpoints:
 
     @pytest.mark.asyncio
     async def test_cascade_delete_task(self, async_client, task_with_id):
-        """Test que las subtasks se eliminan en cascada con la tarea."""
+        """Test que las subtasks se eliminan en cascada lógica con la tarea."""
         # Crear subtasks
         response1 = await async_client.post(
             f"/tasks/{task_with_id}/subtasks/",
@@ -273,15 +273,25 @@ class TestSubtasksEndpoints:
         get_response = await async_client.get(f"/tasks/{task_with_id}/subtasks/")
         assert len(get_response.json()) == 2
 
-        # Eliminar la tarea
+        # Eliminar la tarea (soft delete)
         delete_task_response = await async_client.delete(f"/tasks/{task_with_id}")
         assert delete_task_response.status_code == 204
 
-        # Verificar que la tarea no existe
+        # Verificar que la tarea no existe sin show_deleted
         get_task_response = await async_client.get(f"/tasks/{task_with_id}")
         assert get_task_response.status_code == 404
 
-        # Intentar obtener subtasks (debería dar 404 porque task no existe)
+        # Verificar que con show_deleted la tarea existe con deleted_at
+        get_task_response = await async_client.get(f"/tasks/{task_with_id}?show_deleted=true")
+        assert get_task_response.status_code == 200
+        task_data = get_task_response.json()
+        assert task_data["deleted_at"] is not None
+
+        # Verificar que las subtasks también tienen deleted_at (cascada lógica)
+        assert len(task_data["subtasks"]) == 2
+        assert all(s["deleted_at"] is not None for s in task_data["subtasks"])
+
+        # Intentar obtener subtasks sin show_deleted (debería dar 404 porque task no existe)
         get_subtasks_response = await async_client.get(
             f"/tasks/{task_with_id}/subtasks/"
         )

@@ -43,6 +43,7 @@ class TaskResponse(TaskBase):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = Field(None, description="Fecha de completado")
+    deleted_at: Optional[datetime] = Field(None, description="Fecha de eliminación (NULL = activo)")
     status: TaskStatus = Field(default=TaskStatus.BACKLOG, description="Estado de la tarea en el tablero Kanban")
     subtasks: List["SubtaskResponseNested"] = Field(default_factory=list, description="Lista de subtareas")
 
@@ -59,3 +60,4 @@ class SubtaskResponseNested(BaseModel):
     position: int
     created_at: datetime
     completed_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = Field(None, description="Fecha de eliminación (NULL = activo)")

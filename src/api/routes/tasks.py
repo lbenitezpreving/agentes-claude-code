@@ -18,21 +18,36 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 @router.get("/", response_model=List[TaskResponse])
-async def get_all_tasks(db: AsyncSession = Depends(get_db)):
+async def get_all_tasks(show_deleted: bool = False, db: AsyncSession = Depends(get_db)):
     """Obtiene todas las tareas con sus subtareas desde la base de datos."""
     # Eager loading de subtasks para evitar N+1 queries
     query = select(Task).options(selectinload(Task.subtasks))
+
+    # Filtrar tareas eliminadas si show_deleted=False
+    if not show_deleted:
+        query = query.where(Task.deleted_at.is_(None))
+
     result = await db.execute(query)
     tasks = result.scalars().all()
+
+    # Filtrar subtasks eliminadas en cada tarea (si show_deleted=False)
+    if not show_deleted:
+        for task in tasks:
+            task.subtasks = [s for s in task.subtasks if s.deleted_at is None]
 
     return [TaskResponse.model_validate(task) for task in tasks]
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
+async def get_task(task_id: int, show_deleted: bool = False, db: AsyncSession = Depends(get_db)):
     """Obtiene una tarea por ID con sus subtareas."""
     # Eager loading de subtasks
     query = select(Task).options(selectinload(Task.subtasks)).where(Task.id == task_id)
+
+    # Filtrar tareas eliminadas si show_deleted=False
+    if not show_deleted:
+        query = query.where(Task.deleted_at.is_(None))
+
     result = await db.execute(query)
     task = result.scalar_one_or_none()
 
@@ -41,6 +56,10 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
+
+    # Filtrar subtasks eliminadas (si show_deleted=False)
+    if not show_deleted:
+        task.subtasks = [s for s in task.subtasks if s.deleted_at is None]
 
     return TaskResponse.model_validate(task)
 
@@ -74,8 +93,11 @@ async def update_task(
     db: AsyncSession = Depends(get_db)
 ):
     """Actualiza una tarea existente."""
-    # Obtener tarea
-    query = select(Task).where(Task.id == task_id)
+    # Obtener tarea (solo activas)
+    query = select(Task).where(
+        Task.id == task_id,
+        Task.deleted_at.is_(None)  # Solo tareas activas
+    )
     result = await db.execute(query)
     db_task = result.scalar_one_or_none()
 
@@ -137,8 +159,11 @@ async def update_task(
 @router.patch("/{task_id}/toggle", response_model=TaskResponse)
 async def toggle_task(task_id: int, db: AsyncSession = Depends(get_db)):
     """Alterna el estado de completado de una tarea."""
-    # Obtener tarea
-    query = select(Task).where(Task.id == task_id)
+    # Obtener tarea (solo activas)
+    query = select(Task).where(
+        Task.id == task_id,
+        Task.deleted_at.is_(None)  # Solo tareas activas
+    )
     result = await db.execute(query)
     db_task = result.scalar_one_or_none()
 
@@ -169,8 +194,11 @@ async def update_task_status(
     db: AsyncSession = Depends(get_db)
 ):
     """Actualiza rápidamente solo el status de una tarea."""
-    # Obtener tarea
-    query = select(Task).where(Task.id == task_id)
+    # Obtener tarea (solo activas)
+    query = select(Task).where(
+        Task.id == task_id,
+        Task.deleted_at.is_(None)  # Solo tareas activas
+    )
     result = await db.execute(query)
     db_task = result.scalar_one_or_none()
 
@@ -203,9 +231,12 @@ async def update_task_status(
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    """Elimina una tarea."""
-    # Obtener tarea
-    query = select(Task).where(Task.id == task_id)
+    """Elimina una tarea (borrado lógico)."""
+    # Obtener tarea con subtasks (para cascada lógica)
+    query = select(Task).where(
+        Task.id == task_id,
+        Task.deleted_at.is_(None)  # Solo tareas activas
+    ).options(selectinload(Task.subtasks))
     result = await db.execute(query)
     db_task = result.scalar_one_or_none()
 
@@ -215,5 +246,13 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
             detail="Task not found"
         )
 
-    await db.delete(db_task)
+    # Borrado lógico: marcar deleted_at
+    now = datetime.now(UTC)
+    db_task.deleted_at = now
+
+    # Cascada lógica: marcar subtasks también
+    for subtask in db_task.subtasks:
+        if subtask.deleted_at is None:  # Solo si no estaba eliminada
+            subtask.deleted_at = now
+
     return None

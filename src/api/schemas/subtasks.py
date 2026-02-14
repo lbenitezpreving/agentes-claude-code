@@ -31,3 +31,4 @@ class SubtaskResponse(SubtaskBase):
     position: int = Field(default=0)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: Optional[datetime] = Field(None, description="Fecha de completado")
+    deleted_at: Optional[datetime] = Field(None, description="Fecha de eliminación (NULL = activo)")
